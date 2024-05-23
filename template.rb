@@ -3,6 +3,7 @@
 def add_gems
   gem 'devise'
   gem 'omniauth'
+  gem 'omniauth-rails_csrf_protection'
 
   installed_auth_providers = []
 
@@ -51,6 +52,7 @@ def add_gems
     gem 'rubocop-performance', require: false
     gem 'rubocop-rails', require: false
     gem 'rubocop-rails_config', require: false
+    gem 'hotwire-livereload', require: false
   end
 end
 
@@ -67,7 +69,7 @@ def configure_omniauth
   CODE
 
   # add omniauth routes
-  route "get '/auth/:provider/callback', to: 'sessions#create'"
+  route "get '/auth/:provider/callback', to: 'omniauth_sessions#create'"
   route "get '/auth/failure', to: redirect('/')"
   route "get '/signout', to: 'sessions#destroy', as: 'signout'"
 end
@@ -84,6 +86,12 @@ def install_devise
     end
   end
 
+  insert_into_file 'config/initializers/devise.rb', after: "config.omniauth :github.*$" do
+    <<-CODE
+    config.omniauth :developer
+    CODE
+  end
+
   generate 'devise User'
 end
 
@@ -95,7 +103,9 @@ def create_omniauth_session_controller
   insert_into_file 'app/controllers/omniauth_sessions_controller.rb', after: "def create\n" do
     <<-CODE
       auth = request.env['omniauth.auth']
-      user = User.find_by(provider: auth['provider'], uid: auth['uid']) || User.create_with_omniauth(auth)
+
+      user = User.find_or_create_by_auth(auth)
+
       sign_in(user)
       redirect_to root_url, notice: 'Signed in!'
     CODE
@@ -113,15 +123,21 @@ def add_omniauth_to_user_model
   # insert user model code
   insert_into_file 'app/models/user.rb', before: /^end/ do
     <<-CODE
-    def self.create_with_omniauth(auth)
-      create! do |user|
-        identity = Identity.create!(provider: auth['provider'], uid: auth['uid'])
-        user.identities << identity
-        user.first_name = auth['info']['first_name']
-        user.last_name = auth['info']['last_name']
-        user.email = auth['info']['email']
-      end
+  has_many :identities
+
+  def self.find_or_create_by_auth(auth)
+    identity = Identity.find_by(provider: auth['provider'], uid: auth['uid'])
+    identity&.user || create_with_omniauth(auth)
+  end
+
+  def self.create_with_omniauth(auth)
+    create! do |user|
+      identity = Identity.build(provider: auth['provider'], uid: auth['uid'])
+      user.identities << identity
+      user.email = auth['info']['email']
+      user.password = Devise.friendly_token[0, 20]
     end
+  end
     CODE
   end
 end
@@ -193,14 +209,22 @@ generate :model, 'Identity user:references provider:string uid:string'
 generate :controller, 'home index'
 
 insert_into_file 'app/views/home/index.html.slim' do
-  <<-CODE
-  h2.block-title Sign in with
-  ul.nav.nav-pills
-    li.nav-item= link_to '/auth/developer', 'Sign in with Developer'
-    li.nav-item= link_to '/users/sign_in', 'Sign in with Email'
-  CODE
-end
+<<-CODE
+container.block
+  h1 class="text-3xl font-extrabold text-gray-900 block w-screen"
+    |Home#index coucou
 
+  p Find me in app/views/home/index.html.slim
+  h2.block-title Sign in links
+  ul.w-40.flex.flex-col.space-y-2
+    = form_tag('/auth/developer', method: 'post', data: {turbo: false}) do
+      button type='submit' class="rounded-md bg-indigo-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+        |Login with Developer
+
+    li class="rounded-md bg-indigo-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+      = link_to 'Sign in with Email', '/users/sign_in'
+CODE
+end
 
 route "root to: 'home#index'"
 
