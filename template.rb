@@ -88,12 +88,6 @@ def install_devise
     end
   end
 
-  insert_into_file 'config/initializers/devise.rb', after: 'config.omniauth :github.*$' do
-    <<-CODE
-    config.omniauth :developer
-    CODE
-  end
-
   generate 'devise User'
 end
 
