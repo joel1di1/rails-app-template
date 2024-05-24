@@ -123,7 +123,7 @@ def add_omniauth_to_user_model
   # insert user model code
   insert_into_file 'app/models/user.rb', before: /^end/ do
     <<-CODE
-  has_many :identities
+  has_many :identities, dependent: :destroy
 
   def self.find_or_create_by_auth(auth)
     identity = Identity.find_by(provider: auth['provider'], uid: auth['uid'])
@@ -193,6 +193,42 @@ def configure_database
   CODE
 end
 
+def configure_rubocop
+  # write rubocop.yml
+  file '.rubocop.yml', <<-CODE
+require:
+  - rubocop-capybara
+  - rubocop-factory_bot
+  - rubocop-rspec
+  - rubocop-rails
+  - rubocop-rspec_rails
+
+AllCops:
+  TargetRubyVersion: 3.0
+  NewCops: enable
+  Exclude:
+    - "db/schema.rb"
+    - "bin/*"
+
+Rails:
+  Enabled: true
+
+Style/Documentation:
+  Enabled: false
+
+Layout/LineLength:
+  Max: 120
+
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*'
+
+  CODE
+
+  run 'rubocop -A'
+  run 'rubocop --auto-gen-config'
+end
+
 add_gems
 
 run 'bundle install'
@@ -235,3 +271,5 @@ add_omniauth_to_user_model
 init_docker_compose
 
 configure_database
+
+configure_rubocop
