@@ -6,6 +6,7 @@ def add_gems
   gem 'devise'
   gem 'omniauth'
   gem 'omniauth-rails_csrf_protection'
+  gem 'rails_ping'
 
   installed_auth_providers = []
 
