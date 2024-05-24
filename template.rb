@@ -144,7 +144,7 @@ def init_docker_compose
     version: '3.3'
     services:
       postgres:
-        image: postgres:14
+        image: postgres:16
         container_name: postgres_#{@app_name}
         ports:
         - '127.0.0.1:5432:5432'
