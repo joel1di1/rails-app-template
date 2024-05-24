@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # this is a rails template
 
 def add_gems
@@ -8,9 +10,9 @@ def add_gems
   installed_auth_providers = []
 
   # ask if we want to install any provider
-  if yes?("Do you want to install any omniauth provider?")
+  if yes?('Do you want to install any omniauth provider?')
     loop do
-      provider = ask("Which provider do you want to install? (google, github, facebook, twitter), leave blank to skip")
+      provider = ask('Which provider do you want to install? (google, github, facebook, twitter), leave blank to skip')
       break if provider.empty?
 
       installed_auth_providers << provider
@@ -20,13 +22,13 @@ def add_gems
   # install asked providers
   installed_auth_providers.each do |provider|
     case provider
-    when "google"
+    when 'google'
       gem 'omniauth-google-oauth2'
-    when "facebook"
+    when 'facebook'
       gem 'omniauth-facebook'
-    when "twitter"
+    when 'twitter'
       gem 'omniauth-twitter'
-    when "github"
+    when 'github'
       gem 'omniauth-github'
     end
   end
@@ -78,7 +80,7 @@ def install_devise
   generate 'devise:install'
 
   #  write config.action_mailer.default_url_options = { host: 'localhost', port: 3000 } in development.rb
-  ['development', 'test', 'production'].each do |env|
+  %w[development test production].each do |env|
     insert_into_file "config/environments/#{env}.rb", before: /^end$/ do
       <<-CODE
       config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }
@@ -86,7 +88,7 @@ def install_devise
     end
   end
 
-  insert_into_file 'config/initializers/devise.rb', after: "config.omniauth :github.*$" do
+  insert_into_file 'config/initializers/devise.rb', after: 'config.omniauth :github.*$' do
     <<-CODE
     config.omniauth :developer
     CODE
@@ -167,7 +169,7 @@ end
 
 def configure_database
   # configure database
-  environment "config.active_record.schema_format = :sql", env: 'development'
+  environment 'config.active_record.schema_format = :sql', env: 'development'
 
   # write database.yml
   file 'config/database.yml', <<-CODE
@@ -195,38 +197,38 @@ end
 
 def configure_rubocop
   # write rubocop.yml
-  file '.rubocop.yml', <<-CODE
-require:
-  - rubocop-capybara
-  - rubocop-factory_bot
-  - rubocop-rspec
-  - rubocop-rails
-  - rubocop-rspec_rails
+  file '.rubocop.yml', <<~CODE
+    require:
+      - rubocop-capybara
+      - rubocop-factory_bot
+      - rubocop-rspec
+      - rubocop-rails
+      - rubocop-rspec_rails
 
-AllCops:
-  TargetRubyVersion: 3.0
-  NewCops: enable
-  Exclude:
-    - "db/schema.rb"
-    - "bin/*"
+    AllCops:
+      TargetRubyVersion: 3.0
+      NewCops: enable
+      Exclude:
+        - "db/schema.rb"
+        - "bin/*"
 
-Rails:
-  Enabled: true
+    Rails:
+      Enabled: true
 
-Style/Documentation:
-  Enabled: false
+    Style/Documentation:
+      Enabled: false
 
-Layout/LineLength:
-  Max: 120
+    Layout/LineLength:
+      Max: 120
 
-Metrics/BlockLength:
-  Exclude:
-    - 'spec/**/*'
+    Metrics/BlockLength:
+      Exclude:
+        - 'spec/**/*'
 
   CODE
 
-  run 'rubocop -A'
-  run 'rubocop --auto-gen-config'
+  run 'rubocop -A --fail-level F'
+  run 'rubocop --regenerate-todo --fail-level F'
 end
 
 add_gems
@@ -245,21 +247,21 @@ generate :model, 'Identity user:references provider:string uid:string'
 generate :controller, 'home index'
 
 insert_into_file 'app/views/home/index.html.slim' do
-<<-CODE
-container.block
-  h1 class="text-3xl font-extrabold text-gray-900 block w-screen"
-    |Home#index coucou
+  <<~CODE
+    container.block
+      h1 class="text-3xl font-extrabold text-gray-900 block w-screen"
+        |Home#index coucou
 
-  p Find me in app/views/home/index.html.slim
-  h2.block-title Sign in links
-  ul.w-40.flex.flex-col.space-y-2
-    = form_tag('/auth/developer', method: 'post', data: {turbo: false}) do
-      button type='submit' class="rounded-md bg-indigo-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-        |Login with Developer
+      p Find me in app/views/home/index.html.slim
+      h2.block-title Sign in links
+      ul.w-40.flex.flex-col.space-y-2
+        = form_tag('/auth/developer', method: 'post', data: {turbo: false}) do
+          button type='submit' class="rounded-md bg-indigo-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            |Login with Developer
 
-    li class="rounded-md bg-indigo-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-      = link_to 'Sign in with Email', '/users/sign_in'
-CODE
+        li class="rounded-md bg-indigo-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+          = link_to 'Sign in with Email', '/users/sign_in'
+  CODE
 end
 
 route "root to: 'home#index'"
@@ -273,3 +275,7 @@ init_docker_compose
 configure_database
 
 configure_rubocop
+
+git :init
+git add: '.'
+git commit: %( -m 'Initial commit' )
