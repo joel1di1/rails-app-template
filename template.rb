@@ -164,7 +164,7 @@ end
 
 def configure_database
   # configure database
-  environment 'config.active_record.schema_format = :sql', env: 'development'
+  configure 'config.active_record.schema_format = :sql'
 
   # write database.yml
   file 'config/database.yml', <<-CODE
